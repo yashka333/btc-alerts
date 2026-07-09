@@ -44,7 +44,8 @@
 
     <section class="table-card">
       <div class="table-head-row">
-        <h2>Ваучеры (BTC · 20x · Long)</h2>
+        <h2>Ваучеры</h2>
+        <button id="btn-sound-unlock" class="btn-ghost" title="Разрешить звук в браузере">🔔 Разрешить звук</button>
       </div>
       <div class="vouchers-grid" id="vouchers-grid"></div>
     </section>
@@ -64,27 +65,6 @@
         3) для группы: добавьте <b>@ImoAndVladiAlert_bot</b> в группу, затем временно добавьте туда <b>@RawDataBot</b> — он пришлёт id группы (число со знаком минус), после чего его можно удалить из группы.
       </p>
       <p id="tg-status" class="hint"></p>
-    </section>
-
-    <section class="table-card">
-      <div class="table-head-row">
-        <h2>Аккаунты</h2>
-        <button id="btn-sound-unlock" class="btn-ghost" title="Разрешить звук в браузере">🔔 Разрешить звук</button>
-      </div>
-
-      <table id="accounts-table">
-        <thead>
-          <tr>
-            <th>Аккаунт</th>
-            <th>Цена срабатывания, $</th>
-            <th>Статус</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="accounts-body"></tbody>
-      </table>
-
-      <button id="btn-add" class="btn-primary">+ Добавить аккаунт</button>
     </section>
   </main>
 
