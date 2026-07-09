@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTC Price Alerts</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>₿ BTC Price Alerts</h1>
+    <div class="price-block">
+      <span id="current-price">—</span>
+      <span id="price-status" class="status-dot" title="статус соединения"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="chart-card">
+      <canvas id="chart" width="900" height="220"></canvas>
+      <p id="last-updated" class="hint">Ожидание данных с Binance…</p>
+    </section>
+
+    <section class="table-card">
+      <div class="table-head-row">
+        <h2>Аккаунты</h2>
+        <button id="btn-sound-unlock" class="btn-ghost" title="Разрешить звук в браузере">🔔 Разрешить звук</button>
+      </div>
+
+      <table id="accounts-table">
+        <thead>
+          <tr>
+            <th>Аккаунт</th>
+            <th>Цена срабатывания, $</th>
+            <th>Статус</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="accounts-body"></tbody>
+      </table>
+
+      <button id="btn-add" class="btn-primary">+ Добавить аккаунт</button>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
