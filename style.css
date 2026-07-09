@@ -72,6 +72,11 @@ main {
   padding: 16px;
 }
 
+.chart-frame {
+  height: 650px;
+  width: 100%;
+}
+
 .tradingview-widget-container {
   border-radius: 8px;
   overflow: hidden;

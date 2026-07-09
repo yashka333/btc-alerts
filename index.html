@@ -21,21 +21,23 @@
         <span id="chart-price" class="chart-price">—</span>
         <span class="hint">BTC/USDT · живой график TradingView (данные Binance)</span>
       </div>
-      <div class="tradingview-widget-container" style="height:400px;width:100%">
-        <div class="tradingview-widget-container__widget" style="height:calc(100% - 32px);width:100%"></div>
-        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
-        {
-          "autosize": true,
-          "symbol": "BINANCE:BTCUSDT",
-          "interval": "5",
-          "timezone": "Etc/UTC",
-          "theme": "dark",
-          "style": "1",
-          "locale": "ru",
-          "allow_symbol_change": false,
-          "support_host": "https://www.tradingview.com"
-        }
-        </script>
+      <div class="chart-frame">
+        <div class="tradingview-widget-container" style="height:100%;width:100%">
+          <div class="tradingview-widget-container__widget" style="height:calc(100% - 32px);width:100%"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+          {
+            "autosize": true,
+            "symbol": "BINANCE:BTCUSDT",
+            "interval": "5",
+            "timezone": "Etc/UTC",
+            "theme": "dark",
+            "style": "1",
+            "locale": "ru",
+            "allow_symbol_change": false,
+            "support_host": "https://www.tradingview.com"
+          }
+          </script>
+        </div>
       </div>
       <p id="last-updated" class="hint">Ожидание данных с Binance…</p>
     </section>
