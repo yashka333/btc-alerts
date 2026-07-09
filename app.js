@@ -3,6 +3,8 @@
 
   var STORAGE_KEY = "btc-alerts-state-v1";
   var TG_STORAGE_KEY = "btc-alerts-tg-v1";
+  var VOUCHER_STORAGE_KEY = "btc-alerts-vouchers-v1";
+  var VOUCHER_LEVERAGE = 20;
   var POLL_MS = 5000;
   var SYMBOL = "BTCUSDT";
   var PRICE_URL = "https://api.binance.com/api/v3/ticker/price?symbol=" + SYMBOL;
@@ -10,6 +12,7 @@
 
   var state = loadState();
   var tgConfig = loadTgConfig();
+  var vouchers = loadVouchers();
   var currentPrice = null;
   var audioCtx = null;
 
@@ -24,7 +27,8 @@
     tgChatId: document.getElementById("tg-chatid"),
     tgSaveBtn: document.getElementById("btn-tg-save"),
     tgTestBtn: document.getElementById("btn-tg-test"),
-    tgStatus: document.getElementById("tg-status")
+    tgStatus: document.getElementById("tg-status"),
+    vouchersGrid: document.getElementById("vouchers-grid")
   };
 
   function loadState() {
@@ -52,6 +56,34 @@
 
   function saveTgConfig() {
     localStorage.setItem(TG_STORAGE_KEY, JSON.stringify(tgConfig));
+  }
+
+  function defaultVouchers() {
+    return [
+      { id: "v25", amount: 25, entryPrice: null, alertProfit: null, armed: true, triggered: false },
+      { id: "v50", amount: 50, entryPrice: null, alertProfit: null, armed: true, triggered: false }
+    ];
+  }
+
+  function loadVouchers() {
+    try {
+      var raw = localStorage.getItem(VOUCHER_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length === 2) return parsed;
+      }
+    } catch (e) {}
+    return defaultVouchers();
+  }
+
+  function saveVouchers() {
+    localStorage.setItem(VOUCHER_STORAGE_KEY, JSON.stringify(vouchers));
+  }
+
+  function voucherPnl(v) {
+    if (v.entryPrice === null || currentPrice === null) return null;
+    var positionBtc = (v.amount * VOUCHER_LEVERAGE) / v.entryPrice;
+    return positionBtc * (currentPrice - v.entryPrice);
   }
 
   function sendTelegramMessage(text) {
@@ -198,6 +230,117 @@
     });
   }
 
+  function acknowledgeVoucher(id) {
+    var v = vouchers.filter(function (x) { return x.id === id; })[0];
+    if (!v) return;
+    var pnl = voucherPnl(v);
+    v.triggered = false;
+    v.armed = !(pnl !== null && v.alertProfit !== null && pnl >= v.alertProfit);
+    saveVouchers();
+    renderVouchers();
+    updateAlarmLoop();
+  }
+
+  function renderVouchers() {
+    els.vouchersGrid.innerHTML = "";
+    vouchers.forEach(function (v) {
+      var card = document.createElement("div");
+      card.className = "voucher-card" + (v.triggered ? " triggered" : "");
+
+      var h3 = document.createElement("h3");
+      h3.textContent = "Ваучер " + v.amount + "$";
+      var badge = document.createElement("span");
+      badge.className = "voucher-badge";
+      badge.textContent = VOUCHER_LEVERAGE + "x Long";
+      h3.appendChild(badge);
+      card.appendChild(h3);
+
+      var entryField = document.createElement("div");
+      entryField.className = "voucher-field";
+      var entryLabel = document.createElement("label");
+      entryLabel.textContent = "Цена открытия, $";
+      var entryInput = document.createElement("input");
+      entryInput.type = "number";
+      entryInput.step = "0.01";
+      entryInput.placeholder = "напр. 63000";
+      entryInput.value = v.entryPrice !== null ? v.entryPrice : "";
+      entryInput.addEventListener("change", function () {
+        var num = parseFloat(entryInput.value);
+        v.entryPrice = isNaN(num) ? null : num;
+        v.armed = true;
+        v.triggered = false;
+        saveVouchers();
+        renderVouchers();
+        updateAlarmLoop();
+      });
+      entryField.appendChild(entryLabel);
+      entryField.appendChild(entryInput);
+      card.appendChild(entryField);
+
+      var alertField = document.createElement("div");
+      alertField.className = "voucher-field";
+      var alertLabel = document.createElement("label");
+      alertLabel.textContent = "Алерт при прибыли, $";
+      var alertInput = document.createElement("input");
+      alertInput.type = "number";
+      alertInput.step = "0.01";
+      alertInput.placeholder = "напр. 15";
+      alertInput.value = v.alertProfit !== null ? v.alertProfit : "";
+      alertInput.addEventListener("change", function () {
+        var num = parseFloat(alertInput.value);
+        v.alertProfit = isNaN(num) ? null : num;
+        v.armed = true;
+        v.triggered = false;
+        saveVouchers();
+        renderVouchers();
+        updateAlarmLoop();
+      });
+      alertField.appendChild(alertLabel);
+      alertField.appendChild(alertInput);
+      card.appendChild(alertField);
+
+      var pnl = voucherPnl(v);
+      var pnlEl = document.createElement("div");
+      if (pnl === null) {
+        pnlEl.className = "voucher-pnl";
+        pnlEl.textContent = "PnL: —";
+      } else {
+        pnlEl.className = "voucher-pnl " + (pnl >= 0 ? "pos" : "neg");
+        var pnlPct = (pnl / v.amount) * 100;
+        pnlEl.textContent = (pnl >= 0 ? "+" : "") + "$" + pnl.toFixed(2) + " (" + (pnlPct >= 0 ? "+" : "") + pnlPct.toFixed(2) + "%)";
+      }
+      card.appendChild(pnlEl);
+
+      var statusRow = document.createElement("div");
+      statusRow.className = "voucher-status-row";
+      var statusSpan = document.createElement("span");
+      statusSpan.className = "status-cell";
+      if (v.entryPrice === null || v.alertProfit === null) {
+        statusSpan.textContent = "заполните поля";
+      } else if (v.triggered) {
+        statusSpan.textContent = "🔔 сработало!";
+        statusSpan.className += " triggered";
+      } else {
+        statusSpan.textContent = v.armed ? "ожидание" : "ожидание (сброс)";
+        statusSpan.className += " armed";
+      }
+      statusRow.appendChild(statusSpan);
+
+      var bellBtn = document.createElement("button");
+      bellBtn.className = "btn-icon" + (v.triggered ? " ringing" : "");
+      bellBtn.textContent = v.triggered ? "🔕" : "🔔";
+      bellBtn.title = v.triggered ? "Остановить звук" : "Пока не сработало";
+      bellBtn.disabled = !v.triggered;
+      bellBtn.addEventListener("click", function () {
+        acknowledgeVoucher(v.id);
+      });
+      statusRow.appendChild(bellBtn);
+
+      card.appendChild(statusRow);
+      els.vouchersGrid.appendChild(card);
+    });
+  }
+
   // ---- Audio alarm (Web Audio API beep loop, no external file needed) ----
 
   var sirenOsc = null;
@@ -269,7 +412,8 @@
   }
 
   function anyTriggered() {
-    return state.accounts.some(function (a) { return a.triggered; });
+    return state.accounts.some(function (a) { return a.triggered; }) ||
+      vouchers.some(function (v) { return v.triggered; });
   }
 
   function updateAlarmLoop() {
@@ -336,6 +480,31 @@
     updateAlarmLoop();
   }
 
+  function checkVoucherTriggers() {
+    if (currentPrice === null) return;
+    var changed = false;
+    vouchers.forEach(function (v) {
+      if (v.entryPrice === null || v.alertProfit === null) return;
+      var pnl = voucherPnl(v);
+      if (!v.triggered && v.armed && pnl >= v.alertProfit) {
+        v.triggered = true;
+        v.armed = false;
+        changed = true;
+        sendTelegramMessage(
+          "🎯 Ваучер " + v.amount + "$ (BTC " + VOUCHER_LEVERAGE + "x Long) достиг цели по прибыли!\n" +
+          "Цена входа: $" + v.entryPrice.toLocaleString("en-US") +
+          "\nТекущая цена: $" + currentPrice.toLocaleString("en-US") +
+          "\nPnL: $" + pnl.toFixed(2) + " (цель $" + v.alertProfit + ")"
+        ).catch(function () {});
+      } else if (!v.armed && !v.triggered && pnl < v.alertProfit) {
+        v.armed = true;
+      }
+    });
+    if (changed) saveVouchers();
+    renderVouchers();
+    updateAlarmLoop();
+  }
+
   function fetchPrice() {
     fetch(PRICE_URL)
       .then(function (res) {
@@ -352,6 +521,7 @@
         els.statusDot.className = "status-dot ok";
         els.lastUpdated.textContent = "Обновлено: " + new Date().toLocaleTimeString();
         checkTriggers();
+        checkVoucherTriggers();
       })
       .catch(function (err) {
         els.statusDot.className = "status-dot err";
@@ -362,6 +532,7 @@
   els.addBtn.addEventListener("click", addAccount);
 
   render();
+  renderVouchers();
   updateAlarmLoop();
   fetchPrice();
   setInterval(fetchPrice, POLL_MS);
