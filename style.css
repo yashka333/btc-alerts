@@ -179,6 +179,15 @@ main {
   width: 90px;
 }
 
+.side-select {
+  background: #0f1115;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 7px 6px;
+  font-size: 13px;
+}
+
 .voucher-pnl.pos { color: var(--green); }
 .voucher-pnl.neg { color: var(--red); }
 

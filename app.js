@@ -64,7 +64,8 @@
   function rowPnl(voucherAmount, row) {
     if (row.entryPrice === null || currentPrice === null) return null;
     var positionBtc = (voucherAmount * VOUCHER_LEVERAGE) / row.entryPrice;
-    return positionBtc * (currentPrice - row.entryPrice);
+    var diff = row.side === "short" ? (row.entryPrice - currentPrice) : (currentPrice - row.entryPrice);
+    return positionBtc * diff;
   }
 
   function sendTelegramMessage(text) {
@@ -98,6 +99,7 @@
     v.rows.push({
       id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
       account: v.nextRow,
+      side: "long",
       entryPrice: null,
       alertProfit: null,
       armed: true,
@@ -140,7 +142,7 @@
       h3.textContent = "Ваучер " + v.amount + "$";
       var badge = document.createElement("span");
       badge.className = "voucher-badge";
-      badge.textContent = "BTC " + VOUCHER_LEVERAGE + "x Long";
+      badge.textContent = "BTC " + VOUCHER_LEVERAGE + "x";
       h3.appendChild(badge);
       head.appendChild(h3);
       block.appendChild(head);
@@ -149,7 +151,7 @@
       table.className = "voucher-table";
       var thead = document.createElement("thead");
       thead.innerHTML =
-        "<tr><th>Аккаунт</th><th>Цена открытия, $</th><th>Алерт, $</th><th>PnL</th><th>Статус</th><th></th></tr>";
+        "<tr><th>Аккаунт</th><th>Направление</th><th>Цена открытия, $</th><th>Алерт, $</th><th>PnL</th><th>Статус</th><th></th></tr>";
       table.appendChild(thead);
 
       var tbody = document.createElement("tbody");
@@ -168,6 +170,26 @@
           saveVouchers();
         });
         tdAccount.appendChild(accInput);
+
+        var tdSide = document.createElement("td");
+        var sideSelect = document.createElement("select");
+        sideSelect.className = "side-select";
+        ["long", "short"].forEach(function (val) {
+          var opt = document.createElement("option");
+          opt.value = val;
+          opt.textContent = val === "long" ? "Long" : "Short";
+          if ((row.side || "long") === val) opt.selected = true;
+          sideSelect.appendChild(opt);
+        });
+        sideSelect.addEventListener("change", function () {
+          row.side = sideSelect.value;
+          row.armed = true;
+          row.triggered = false;
+          saveVouchers();
+          renderVouchers();
+          updateAlarmLoop();
+        });
+        tdSide.appendChild(sideSelect);
 
         var tdEntry = document.createElement("td");
         var entryInput = document.createElement("input");
@@ -254,6 +276,7 @@
         tdActions.appendChild(actionsWrap);
 
         tr.appendChild(tdAccount);
+        tr.appendChild(tdSide);
         tr.appendChild(tdEntry);
         tr.appendChild(tdAlert);
         tr.appendChild(tdPnl);
@@ -404,7 +427,7 @@
           row.armed = false;
           changed = true;
           sendTelegramMessage(
-            "🎯 Ваучер " + v.amount + "$ (BTC " + VOUCHER_LEVERAGE + "x Long), аккаунт " + row.account + " достиг цели по прибыли!\n" +
+            "🎯 Ваучер " + v.amount + "$ (BTC " + VOUCHER_LEVERAGE + "x " + (row.side === "short" ? "Short" : "Long") + "), аккаунт " + row.account + " достиг цели по прибыли!\n" +
             "Цена входа: $" + row.entryPrice.toLocaleString("en-US") +
             "\nТекущая цена: $" + currentPrice.toLocaleString("en-US") +
             "\nPnL: $" + pnl.toFixed(2) + " (цель $" + row.alertProfit + ")"
