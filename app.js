@@ -6,6 +6,7 @@
   var POLL_MS = 5000;
   var SYMBOL = "BTCUSDT";
   var PRICE_URL = "https://api.binance.com/api/v3/ticker/price?symbol=" + SYMBOL;
+  var TG_RELAY_URL = "https://btc-alerts-relay.antonyksenua.workers.dev";
 
   var state = loadState();
   var tgConfig = loadTgConfig();
@@ -20,7 +21,6 @@
     chartPrice: document.getElementById("chart-price"),
     statusDot: document.getElementById("price-status"),
     lastUpdated: document.getElementById("last-updated"),
-    tgToken: document.getElementById("tg-token"),
     tgChatId: document.getElementById("tg-chatid"),
     tgSaveBtn: document.getElementById("btn-tg-save"),
     tgTestBtn: document.getElementById("btn-tg-test"),
@@ -47,7 +47,7 @@
       var raw = localStorage.getItem(TG_STORAGE_KEY);
       if (raw) return JSON.parse(raw);
     } catch (e) {}
-    return { token: "", chatId: "" };
+    return { chatId: "" };
   }
 
   function saveTgConfig() {
@@ -55,12 +55,11 @@
   }
 
   function sendTelegramMessage(text) {
-    if (!tgConfig.token || !tgConfig.chatId) return Promise.resolve(false);
-    var url = "https://api.telegram.org/bot" + tgConfig.token + "/sendMessage";
-    return fetch(url, {
+    if (!tgConfig.chatId) return Promise.resolve(false);
+    return fetch(TG_RELAY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: tgConfig.chatId, text: text })
+      body: JSON.stringify({ chatId: tgConfig.chatId, text: text })
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {
@@ -289,18 +288,15 @@
 
   // ---- Telegram settings ----
 
-  els.tgToken.value = tgConfig.token || "";
   els.tgChatId.value = tgConfig.chatId || "";
 
   els.tgSaveBtn.addEventListener("click", function () {
-    tgConfig.token = els.tgToken.value.trim();
     tgConfig.chatId = els.tgChatId.value.trim();
     saveTgConfig();
     els.tgStatus.textContent = "Сохранено.";
   });
 
   els.tgTestBtn.addEventListener("click", function () {
-    tgConfig.token = els.tgToken.value.trim();
     tgConfig.chatId = els.tgChatId.value.trim();
     saveTgConfig();
     els.tgStatus.textContent = "Отправляю…";

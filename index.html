@@ -47,15 +47,14 @@
         <h2>Telegram-уведомления</h2>
       </div>
       <div class="tg-settings">
-        <input type="text" id="tg-token" placeholder="Токен бота, напр. 123456789:AAExample">
-        <input type="text" id="tg-chatid" placeholder="Chat ID, напр. 123456789">
+        <input type="text" id="tg-chatid" placeholder="Ваш Chat ID, напр. 123456789">
         <button id="btn-tg-save" class="btn-primary">Сохранить</button>
         <button id="btn-tg-test" class="btn-ghost">Отправить тест</button>
       </div>
       <p class="hint">
-        Как получить: 1) в Telegram напишите боту <b>@BotFather</b> команду <b>/newbot</b> и скопируйте выданный токен.
-        2) откройте чат со своим новым ботом и нажмите Start (напишите ему что угодно).
-        3) откройте в браузере адрес <code>https://api.telegram.org/bot&lt;ВАШ_ТОКЕН&gt;/getUpdates</code> — там будет число <code>"chat":{"id": ...}</code>, это и есть Chat ID.
+        Как получить Chat ID: 1) в Telegram откройте бота <b>@userinfobot</b> и нажмите Start — он пришлёт в ответ ваш личный <b>Id</b>, это и есть Chat ID для личных сообщений.
+        2) обязательно также откройте бота <b>@ImoAndVladiAlert_bot</b> и нажмите Start (иначе он не сможет писать вам, пока вы не начали с ним диалог).
+        3) для группы: добавьте <b>@ImoAndVladiAlert_bot</b> в группу, затем временно добавьте туда <b>@RawDataBot</b> — он пришлёт id группы (число со знаком минус), после чего его можно удалить из группы.
       </p>
       <p id="tg-status" class="hint"></p>
     </section>
