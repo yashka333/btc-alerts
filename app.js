@@ -3,13 +3,10 @@
 
   var STORAGE_KEY = "btc-alerts-state-v1";
   var POLL_MS = 5000;
-  var MAX_POINTS = 120;
   var SYMBOL = "BTCUSDT";
   var PRICE_URL = "https://api.binance.com/api/v3/ticker/price?symbol=" + SYMBOL;
-  var KLINES_URL = "https://api.binance.com/api/v3/klines?symbol=" + SYMBOL + "&interval=1m&limit=" + MAX_POINTS;
 
   var state = loadState();
-  var priceHistory = [];
   var currentPrice = null;
   var audioCtx = null;
 
@@ -20,8 +17,7 @@
     currentPrice: document.getElementById("current-price"),
     chartPrice: document.getElementById("chart-price"),
     statusDot: document.getElementById("price-status"),
-    lastUpdated: document.getElementById("last-updated"),
-    canvas: document.getElementById("chart")
+    lastUpdated: document.getElementById("last-updated")
   };
 
   function loadState() {
@@ -294,9 +290,6 @@
         els.chartPrice.textContent = priceText;
         els.statusDot.className = "status-dot ok";
         els.lastUpdated.textContent = "Обновлено: " + new Date().toLocaleTimeString();
-        priceHistory.push(price);
-        if (priceHistory.length > MAX_POINTS) priceHistory.shift();
-        drawChart();
         checkTriggers();
       })
       .catch(function (err) {
@@ -305,60 +298,10 @@
       });
   }
 
-  function fetchHistory() {
-    return fetch(KLINES_URL)
-      .then(function (res) {
-        if (!res.ok) throw new Error("bad status " + res.status);
-        return res.json();
-      })
-      .then(function (klines) {
-        // each kline: [openTime, open, high, low, close, volume, closeTime, ...]
-        priceHistory = klines.map(function (k) { return parseFloat(k[4]); });
-        drawChart();
-      })
-      .catch(function () {
-        // history is a nice-to-have; live polling still works without it
-      });
-  }
-
-  // ---- Chart (plain canvas line chart, no dependencies) ----
-
-  function drawChart() {
-    var canvas = els.canvas;
-    var ctx = canvas.getContext("2d");
-    var w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-
-    if (priceHistory.length < 2) return;
-
-    var min = Math.min.apply(null, priceHistory);
-    var max = Math.max.apply(null, priceHistory);
-    if (min === max) { min -= 1; max += 1; }
-    var pad = 10;
-
-    function x(i) { return pad + (i / (priceHistory.length - 1)) * (w - pad * 2); }
-    function y(v) { return h - pad - ((v - min) / (max - min)) * (h - pad * 2); }
-
-    ctx.beginPath();
-    priceHistory.forEach(function (v, i) {
-      var px = x(i), py = y(v);
-      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-    });
-    ctx.strokeStyle = "#f0b90b";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.lineTo(x(priceHistory.length - 1), h - pad);
-    ctx.lineTo(x(0), h - pad);
-    ctx.closePath();
-    ctx.fillStyle = "rgba(240, 185, 11, 0.12)";
-    ctx.fill();
-  }
-
   els.addBtn.addEventListener("click", addAccount);
 
   render();
   updateAlarmLoop();
-  fetchHistory().then(fetchPrice);
+  fetchPrice();
   setInterval(fetchPrice, POLL_MS);
 })();
