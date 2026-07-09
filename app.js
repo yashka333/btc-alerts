@@ -6,6 +6,7 @@
   var MAX_POINTS = 120;
   var SYMBOL = "BTCUSDT";
   var PRICE_URL = "https://api.binance.com/api/v3/ticker/price?symbol=" + SYMBOL;
+  var KLINES_URL = "https://api.binance.com/api/v3/klines?symbol=" + SYMBOL + "&interval=1m&limit=" + MAX_POINTS;
 
   var state = loadState();
   var priceHistory = [];
@@ -18,6 +19,7 @@
     addBtn: document.getElementById("btn-add"),
     soundBtn: document.getElementById("btn-sound-unlock"),
     currentPrice: document.getElementById("current-price"),
+    chartPrice: document.getElementById("chart-price"),
     statusDot: document.getElementById("price-status"),
     lastUpdated: document.getElementById("last-updated"),
     canvas: document.getElementById("chart")
@@ -246,7 +248,9 @@
         var price = parseFloat(data.price);
         if (isNaN(price)) throw new Error("bad price");
         currentPrice = price;
-        els.currentPrice.textContent = "$" + price.toLocaleString("en-US", { maximumFractionDigits: 2 });
+        var priceText = "$" + price.toLocaleString("en-US", { maximumFractionDigits: 2 });
+        els.currentPrice.textContent = priceText;
+        els.chartPrice.textContent = priceText;
         els.statusDot.className = "status-dot ok";
         els.lastUpdated.textContent = "Обновлено: " + new Date().toLocaleTimeString();
         priceHistory.push(price);
@@ -257,6 +261,22 @@
       .catch(function (err) {
         els.statusDot.className = "status-dot err";
         els.lastUpdated.textContent = "Ошибка соединения с Binance, повтор через " + (POLL_MS / 1000) + "с";
+      });
+  }
+
+  function fetchHistory() {
+    return fetch(KLINES_URL)
+      .then(function (res) {
+        if (!res.ok) throw new Error("bad status " + res.status);
+        return res.json();
+      })
+      .then(function (klines) {
+        // each kline: [openTime, open, high, low, close, volume, closeTime, ...]
+        priceHistory = klines.map(function (k) { return parseFloat(k[4]); });
+        drawChart();
+      })
+      .catch(function () {
+        // history is a nice-to-have; live polling still works without it
       });
   }
 
@@ -298,6 +318,6 @@
 
   render();
   updateAlarmLoop();
-  fetchPrice();
+  fetchHistory().then(fetchPrice);
   setInterval(fetchPrice, POLL_MS);
 })();
