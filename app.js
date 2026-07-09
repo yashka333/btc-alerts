@@ -2,11 +2,13 @@
   "use strict";
 
   var STORAGE_KEY = "btc-alerts-state-v1";
+  var TG_STORAGE_KEY = "btc-alerts-tg-v1";
   var POLL_MS = 5000;
   var SYMBOL = "BTCUSDT";
   var PRICE_URL = "https://api.binance.com/api/v3/ticker/price?symbol=" + SYMBOL;
 
   var state = loadState();
+  var tgConfig = loadTgConfig();
   var currentPrice = null;
   var audioCtx = null;
 
@@ -17,7 +19,12 @@
     currentPrice: document.getElementById("current-price"),
     chartPrice: document.getElementById("chart-price"),
     statusDot: document.getElementById("price-status"),
-    lastUpdated: document.getElementById("last-updated")
+    lastUpdated: document.getElementById("last-updated"),
+    tgToken: document.getElementById("tg-token"),
+    tgChatId: document.getElementById("tg-chatid"),
+    tgSaveBtn: document.getElementById("btn-tg-save"),
+    tgTestBtn: document.getElementById("btn-tg-test"),
+    tgStatus: document.getElementById("tg-status")
   };
 
   function loadState() {
@@ -33,6 +40,33 @@
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function loadTgConfig() {
+    try {
+      var raw = localStorage.getItem(TG_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return { token: "", chatId: "" };
+  }
+
+  function saveTgConfig() {
+    localStorage.setItem(TG_STORAGE_KEY, JSON.stringify(tgConfig));
+  }
+
+  function sendTelegramMessage(text) {
+    if (!tgConfig.token || !tgConfig.chatId) return Promise.resolve(false);
+    var url = "https://api.telegram.org/bot" + tgConfig.token + "/sendMessage";
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: tgConfig.chatId, text: text })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data.ok) throw new Error(data.description || "Telegram API error");
+        return true;
+      });
   }
 
   function addAccount() {
@@ -253,6 +287,32 @@
     setTimeout(updateAlarmLoop, 1200); // brief test burst, then follow the real trigger state
   });
 
+  // ---- Telegram settings ----
+
+  els.tgToken.value = tgConfig.token || "";
+  els.tgChatId.value = tgConfig.chatId || "";
+
+  els.tgSaveBtn.addEventListener("click", function () {
+    tgConfig.token = els.tgToken.value.trim();
+    tgConfig.chatId = els.tgChatId.value.trim();
+    saveTgConfig();
+    els.tgStatus.textContent = "Сохранено.";
+  });
+
+  els.tgTestBtn.addEventListener("click", function () {
+    tgConfig.token = els.tgToken.value.trim();
+    tgConfig.chatId = els.tgChatId.value.trim();
+    saveTgConfig();
+    els.tgStatus.textContent = "Отправляю…";
+    sendTelegramMessage("✅ Тестовое сообщение с BTC Price Alerts. Всё настроено верно.")
+      .then(function (ok) {
+        els.tgStatus.textContent = ok ? "Тестовое сообщение отправлено, проверьте Telegram." : "Заполните токен и Chat ID.";
+      })
+      .catch(function (err) {
+        els.tgStatus.textContent = "Ошибка: " + err.message;
+      });
+  });
+
   // ---- Price polling ----
 
   function checkTriggers() {
@@ -264,6 +324,11 @@
         acc.triggered = true;
         acc.armed = false;
         changed = true;
+        sendTelegramMessage(
+          "🔔 BTC достиг цены срабатывания!\nАккаунт: " + acc.account +
+          "\nЦель: $" + acc.target.toLocaleString("en-US") +
+          "\nТекущая цена: $" + currentPrice.toLocaleString("en-US")
+        ).catch(function () {});
       } else if (!acc.armed && !acc.triggered && currentPrice < acc.target) {
         acc.armed = true;
       }

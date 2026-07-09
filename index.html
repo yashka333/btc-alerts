@@ -44,6 +44,24 @@
 
     <section class="table-card">
       <div class="table-head-row">
+        <h2>Telegram-уведомления</h2>
+      </div>
+      <div class="tg-settings">
+        <input type="text" id="tg-token" placeholder="Токен бота, напр. 123456789:AAExample">
+        <input type="text" id="tg-chatid" placeholder="Chat ID, напр. 123456789">
+        <button id="btn-tg-save" class="btn-primary">Сохранить</button>
+        <button id="btn-tg-test" class="btn-ghost">Отправить тест</button>
+      </div>
+      <p class="hint">
+        Как получить: 1) в Telegram напишите боту <b>@BotFather</b> команду <b>/newbot</b> и скопируйте выданный токен.
+        2) откройте чат со своим новым ботом и нажмите Start (напишите ему что угодно).
+        3) откройте в браузере адрес <code>https://api.telegram.org/bot&lt;ВАШ_ТОКЕН&gt;/getUpdates</code> — там будет число <code>"chat":{"id": ...}</code>, это и есть Chat ID.
+      </p>
+      <p id="tg-status" class="hint"></p>
+    </section>
+
+    <section class="table-card">
+      <div class="table-head-row">
         <h2>Аккаунты</h2>
         <button id="btn-sound-unlock" class="btn-ghost" title="Разрешить звук в браузере">🔔 Разрешить звук</button>
       </div>

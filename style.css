@@ -110,6 +110,27 @@ main {
   flex-wrap: wrap;
 }
 
+.tg-settings {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.tg-settings input {
+  flex: 1;
+  min-width: 220px;
+  width: auto;
+}
+
+.hint code {
+  background: #0f1115;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+}
+
 .table-head-row h2 {
   margin: 0 0 0 0;
   font-size: 16px;
