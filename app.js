@@ -12,7 +12,6 @@
   var priceHistory = [];
   var currentPrice = null;
   var audioCtx = null;
-  var alarmTimer = null;
 
   var els = {
     body: document.getElementById("accounts-body"),
@@ -172,6 +171,9 @@
 
   // ---- Audio alarm (Web Audio API beep loop, no external file needed) ----
 
+  var sirenOsc = null;
+  var sirenLfo = null;
+
   function ensureAudio() {
     if (!audioCtx) {
       var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -180,19 +182,61 @@
     if (audioCtx.state === "suspended") audioCtx.resume();
   }
 
-  function beep() {
-    if (!audioCtx) return;
-    var osc = audioCtx.createOscillator();
+  function startSiren() {
+    if (sirenOsc) return; // already ringing
+    ensureAudio();
+
+    var compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.value = -12;
+    compressor.ratio.value = 16;
+    compressor.connect(audioCtx.destination);
+
+    // Two detuned sawtooth voices for a harsh, piercing alarm tone.
     var gain = audioCtx.createGain();
-    osc.type = "sine";
+    gain.gain.value = 0.9;
+    gain.connect(compressor);
+
+    var osc = audioCtx.createOscillator();
+    osc.type = "sawtooth";
     osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.35, audioCtx.currentTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.28);
+
+    var osc2 = audioCtx.createOscillator();
+    osc2.type = "sawtooth";
+    osc2.frequency.value = 884; // slight detune adds a beating, harsher edge
+
+    // Wailing siren sweep between two tones (classic alarm effect).
+    var lfo = audioCtx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.value = 2.4;
+    var lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 340;
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+    lfoGain.connect(osc2.frequency);
+
     osc.connect(gain);
-    gain.connect(audioCtx.destination);
+    osc2.connect(gain);
+
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.3);
+    osc2.start();
+    lfo.start();
+
+    sirenOsc = [osc, osc2, gain, compressor];
+    sirenLfo = lfo;
+  }
+
+  function stopSiren() {
+    if (!sirenOsc) return;
+    sirenOsc[0].stop();
+    sirenOsc[1].stop();
+    sirenOsc[0].disconnect();
+    sirenOsc[1].disconnect();
+    sirenOsc[2].disconnect();
+    sirenOsc[3].disconnect();
+    sirenLfo.stop();
+    sirenLfo.disconnect();
+    sirenOsc = null;
+    sirenLfo = null;
   }
 
   function anyTriggered() {
@@ -200,20 +244,17 @@
   }
 
   function updateAlarmLoop() {
-    var shouldRing = anyTriggered();
-    if (shouldRing && !alarmTimer) {
-      ensureAudio();
-      beep();
-      alarmTimer = setInterval(beep, 700);
-    } else if (!shouldRing && alarmTimer) {
-      clearInterval(alarmTimer);
-      alarmTimer = null;
+    if (anyTriggered()) {
+      startSiren();
+    } else {
+      stopSiren();
     }
   }
 
   els.soundBtn.addEventListener("click", function () {
     ensureAudio();
-    beep();
+    startSiren();
+    setTimeout(updateAlarmLoop, 1200); // brief test burst, then follow the real trigger state
   });
 
   // ---- Price polling ----
